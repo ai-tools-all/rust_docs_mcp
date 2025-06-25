@@ -7,17 +7,20 @@ To set up the project, follow these steps:
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/example/repo.git  # Replace with actual repository URL
-   cd docs_rs_rust_mcp
-   ```
-
-2. **Synchronize dependencies with `uv`**:
-
-   ```bash
+   git clone https://github.com/ai-tools-all/rust_docs_mcp.git  
+   cd rust_docs_mcp
    uv sync
    ```
 
+
+2. **Run the server**:
+
+   ```bash
+   uv run both_stdio_server.py sse
+   ```
+
 This will install all necessary dependencies for the project.
+
 
 This project implements a FastMCP server designed to manage and provide access to Rust crate documentation from [docs.rs](https://docs.rs/). It offers functionalities to parse `Cargo.lock` files, fetch documentation, cache it locally, and serve it via the FastMCP protocol.
 
