@@ -1,5 +1,24 @@
 # FastMCP Rust Documentation Server
 
+## Installation
+
+To set up the project, follow these steps:
+
+1. **Clone the repository**:
+
+   ```bash
+   git clone https://github.com/example/repo.git  # Replace with actual repository URL
+   cd docs_rs_rust_mcp
+   ```
+
+2. **Synchronize dependencies with `uv`**:
+
+   ```bash
+   uv sync
+   ```
+
+This will install all necessary dependencies for the project.
+
 This project implements a FastMCP server designed to manage and provide access to Rust crate documentation from [docs.rs](https://docs.rs/). It offers functionalities to parse `Cargo.lock` files, fetch documentation, cache it locally, and serve it via the FastMCP protocol.
 
 ## Features
@@ -53,3 +72,8 @@ The server can be run in different transport modes:
   ```
 
 These commands assume you have `uv` installed and are running them from the project's root directory.
+
+### Prerequisites
+
+- `uv`: A fast Python package installer and resolver. If you don't have it, you can install it via `pip install uv`.
+- `html2markdown`: A command-line tool for converting HTML to Markdown. You might need to install it separately (e.g., `pip install html2markdown`).
