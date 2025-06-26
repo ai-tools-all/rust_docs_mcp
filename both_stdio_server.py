@@ -42,12 +42,12 @@ if __name__ == "__main__":
         
         if transport == "sse":
             # Run with SSE transport
-            logger.info("Running with SSE transport on http://127.0.0.1:8000")
-            mcp.run(transport="sse", host="127.0.0.1", port=8000)
+            logger.info("Running with SSE transport on http://127.0.0.1:8604")
+            mcp.run(transport="sse", host="127.0.0.1", port=8604)
         elif transport == "http":
             # Run with HTTP transport
-            logger.info("Running with HTTP transport on http://127.0.0.1:8000/mcp")
-            mcp.run(transport="http", host="127.0.0.1", port=8000, path="/mcp")
+            logger.info("Running with HTTP transport on http://127.0.0.1:8604/mcp")
+            mcp.run(transport="http", host="127.0.0.1", port=8604, path="/mcp")
         elif transport == "stdio":
             # Run with STDIO transport (default)
             logger.info("Running with STDIO transport")
