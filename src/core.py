@@ -72,7 +72,7 @@ async def read_cargo_lock_impl(file_path: str, docs_cache_dir: Path, logs_dir: P
         return {}
 
 
-async def fetch_crate_docs_impl(crate_name: str, version: str, docs_cache_dir: Path, logger, ctx: Optional[Context] = None) -> Dict[str, str]:
+async def fetch_crate_docs_impl(crate_name: str, version: str, docs_cache_dir: Path, logger, ctx: Optional[Context] = None, include_features: bool = False) -> Dict[str, str]:
     """
     Core implementation for fetching documentation for a specific Rust crate.
     First checks local cache, then fetches from docs.rs if not cached.
@@ -83,6 +83,7 @@ async def fetch_crate_docs_impl(crate_name: str, version: str, docs_cache_dir: P
         docs_cache_dir: Directory for documentation cache
         logger: Logger instance
         ctx: Optional FastMCP context for user feedback
+        include_features: If True, also fetch feature flags information
         
     Returns:
         Dictionary mapping module paths to their documentation content as markdown
@@ -98,7 +99,7 @@ async def fetch_crate_docs_impl(crate_name: str, version: str, docs_cache_dir: P
     # If not cached, fetch from docs.rs
     try:
         async with DocsRsScraper() as scraper:
-            docs = await scraper.fetch_crate_docs(crate_name, version, logger, ctx)
+            docs = await scraper.fetch_crate_docs(crate_name, version, logger, ctx, include_features)
         
         if docs:
             if ctx:

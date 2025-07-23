@@ -37,10 +37,17 @@ class DocsRsScraper:
         if self.session:
             await self.session.close()
     
-    async def fetch_crate_docs(self, crate_name: str, version: str, logger, ctx: Optional[Context] = None) -> Dict[str, str]:
+    async def fetch_crate_docs(self, crate_name: str, version: str, logger, ctx: Optional[Context] = None, include_features: bool = False) -> Dict[str, str]:
         """
         Fetch documentation for a specific crate and version.
         Returns a dict of module_path -> markdown_content.
+        
+        Args:
+            crate_name: Name of the crate
+            version: Version of the crate  
+            logger: Logger instance
+            ctx: Optional FastMCP context
+            include_features: If True, also fetch feature flags information
         """
         if ctx:
             await ctx.info(f"Fetching docs for {crate_name} v{version}")
@@ -109,6 +116,12 @@ class DocsRsScraper:
                     
                     # Small delay to be respectful
                     await asyncio.sleep(0.5)
+                
+                # Fetch feature flags if requested
+                if include_features:
+                    features_doc = await self._fetch_feature_flags(crate_name, version, logger, ctx)
+                    if features_doc:
+                        docs["features"] = features_doc
         
         except Exception as e:
             if ctx:
@@ -177,6 +190,129 @@ class DocsRsScraper:
                 markdown_parts.append("")
         
         return "\n".join(markdown_parts)
+    
+    async def _fetch_feature_flags(self, crate_name: str, version: str, logger, ctx: Optional[Context] = None) -> str:
+        """
+        Fetch feature flags information for a crate.
+        
+        Args:
+            crate_name: Name of the crate
+            version: Version of the crate
+            logger: Logger instance
+            ctx: Optional FastMCP context
+            
+        Returns:
+            Markdown content of feature flags or empty string if not found
+        """
+        features_url = f"https://docs.rs/crate/{crate_name}/{version}/features"
+        
+        if ctx:
+            await ctx.info(f"Fetching feature flags from {features_url}")
+        logger.info(
+            "Fetching feature flags",
+            extra={'extra_data': {'crate': crate_name, 'version': version, 'url': features_url}}
+        )
+        
+        try:
+            async with self.session.get(features_url) as response:
+                if response.status != 200:
+                    logger.warning(
+                        "Failed to fetch feature flags", 
+                        extra={'extra_data': {'url': features_url, 'status': response.status}}
+                    )
+                    return ""
+                
+                content = await response.text()
+                soup = BeautifulSoup(content, 'html.parser')
+                
+                return self._parse_feature_flags(soup, crate_name)
+        
+        except Exception as e:
+            logger.error(
+                "Error fetching feature flags", exc_info=True,
+                extra={'extra_data': {'crate': crate_name, 'version': version, 'url': features_url}}
+            )
+            return ""
+    
+    def _parse_feature_flags(self, soup: BeautifulSoup, crate_name: str) -> str:
+        """
+        Parse feature flags from the features page HTML.
+        
+        Args:
+            soup: BeautifulSoup object of the features page
+            crate_name: Name of the crate
+            
+        Returns:
+            Markdown formatted feature flags information
+        """
+        markdown_parts = [f"# {crate_name} - Feature Flags\n"]
+        
+        # Look for feature flag sections
+        feature_sections = soup.find_all(['div', 'section'], class_=lambda x: x and 'feature' in x.lower())
+        
+        if not feature_sections:
+            # Try to find features in tables or lists
+            tables = soup.find_all('table')
+            for table in tables:
+                headers = table.find_all('th')
+                if any('feature' in th.get_text().lower() for th in headers):
+                    feature_sections.append(table)
+        
+        if not feature_sections:
+            # Look for any structured content that might contain features
+            main_content = soup.find('main') or soup.find('div', class_='content') or soup.find('body')
+            if main_content:
+                feature_sections = [main_content]
+        
+        for section in feature_sections:
+            # Extract feature information from tables
+            tables = section.find_all('table')
+            for table in tables:
+                rows = table.find_all('tr')
+                if not rows:
+                    continue
+                
+                # Check if this looks like a features table
+                header_row = rows[0]
+                headers = [th.get_text(strip=True).lower() for th in header_row.find_all(['th', 'td'])]
+                
+                if any(keyword in ' '.join(headers) for keyword in ['feature', 'name', 'description']):
+                    markdown_parts.append("\n## Available Features\n")
+                    
+                    for row in rows[1:]:  # Skip header row
+                        cells = row.find_all(['td', 'th'])
+                        if len(cells) >= 2:
+                            feature_name = cells[0].get_text(strip=True)
+                            feature_desc = cells[1].get_text(strip=True)
+                            
+                            if feature_name and feature_desc:
+                                markdown_parts.append(f"### `{feature_name}`")
+                                markdown_parts.append(f"{feature_desc}\n")
+            
+            # Extract from lists
+            lists = section.find_all(['ul', 'ol'])
+            for ul in lists:
+                items = ul.find_all('li')
+                if items and any('feature' in item.get_text().lower() for item in items[:3]):
+                    markdown_parts.append("\n## Feature List\n")
+                    for li in items:
+                        text = li.get_text(strip=True)
+                        if text:
+                            markdown_parts.append(f"- {text}")
+                    markdown_parts.append("")
+        
+        # If no structured features found, try to extract any relevant text
+        if len(markdown_parts) == 1:  # Only has the header
+            content_divs = soup.find_all(['div', 'p'], string=lambda text: text and 'feature' in text.lower())
+            if content_divs:
+                markdown_parts.append("\n## Feature Information\n")
+                for div in content_divs[:5]:  # Limit to first 5 relevant sections
+                    text = div.get_text(strip=True)
+                    if text and len(text) > 10:
+                        markdown_parts.append(f"{text}\n")
+        
+        result = "\n".join(markdown_parts)
+        return result if len(result.strip()) > len(f"# {crate_name} - Feature Flags") else ""
 
 
 async def load_cached_docs(crate_name: str, version: str, docs_cache_dir: Path, logger, ctx: Optional[Context] = None) -> Optional[Dict[str, str]]:

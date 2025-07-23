@@ -26,18 +26,20 @@ def register_docs_tools(mcp: FastMCP):
     """Register documentation related MCP tools."""
     
     @mcp.tool
-    async def fetch_crate_docs(crate_name: str, version: str, ctx: Context) -> Dict[str, str]:
+    async def fetch_crate_docs(crate_name: str, version: str, ctx: Context, include_features: bool = False) -> Dict[str, str]:
         """
         Fetch documentation for a specific Rust crate from docs.rs.
         
         Args:
             crate_name: Name of the crate
             version: Version of the crate
+            include_features: If True, also fetch feature flags information (optional)
             
         Returns:
-            Dictionary mapping module paths to their documentation content as markdown
+            Dictionary mapping module paths to their documentation content as markdown.
+            If include_features is True, includes a 'features' key with feature flags info.
         """
-        return await fetch_crate_docs_impl(crate_name, version, DOCS_CACHE_DIR, logger, ctx)
+        return await fetch_crate_docs_impl(crate_name, version, DOCS_CACHE_DIR, logger, ctx, include_features)
 
     @mcp.tool
     async def save_docs_to_disk(crate_name: str, version: str, docs: Dict[str, str], ctx: Context) -> str:
